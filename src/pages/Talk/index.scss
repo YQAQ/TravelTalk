@@ -10,4 +10,56 @@
       -webkit-overflow-scrolling: touch;
     }
   }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  &__list {
+    height: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    &-inner {
+      min-height: calc(100% + 1px);
+    }
+    &-item {
+      padding: 20px 30px;
+    }
+  }
+
+  &__options {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    bottom: 0;
+    background-color: transparent;
+    transform: translate3d(0, 100%, 0);
+    animation: hide 0.4s ease 0s;
+    &--show {
+      transform: none;
+      animation: show 0.4s ease 0s;
+    }
+  }
+}
+
+@keyframes show {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes hide {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
 }
