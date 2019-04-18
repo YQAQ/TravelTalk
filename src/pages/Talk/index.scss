@@ -1,0 +1,13 @@
+.talk {
+  &__drawer {
+    position: relative;
+    min-height: calc(100vh - 45px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    .am-drawer-sidebar {
+      background-color: #fff;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+  }
+}

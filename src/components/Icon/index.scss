@@ -1,0 +1,17 @@
+.mui-icon {
+  color: #333;
+  font-size: 12px;
+  &-darken {
+    color: #a3a3a3 !important;
+  }
+  &-darken:hover {
+    color: darken(#a3a3a3, 20) !important;
+  }
+  &-pointer {
+    cursor: pointer !important;
+  }
+  &-disabled {
+    cursor: not-allowed !important;
+    color: #d5dce7 !important;
+  }
+}

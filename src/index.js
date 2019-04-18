@@ -7,6 +7,8 @@ import { renderRouter, routesMap } from './router';
 import configureStore from './store';
 import history from './history';
 import * as serviceWorker from './serviceWorker';
+import './iconfont/iconfont.css';
+import './style/antd.scss';
 
 const store = configureStore({});
 
