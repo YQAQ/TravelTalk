@@ -19,7 +19,7 @@ export default class Message extends Component {
 
   render() {
     const { prefix, className, data } = this.props;
-    const { msg, type } = data;
+    const { msg, type, key } = data;
     const isServiceMessage = type < 8;
     const avatar = isServiceMessage ? mioji_avatar : user_avatar;
     const classes = cx(prefix, className, {
@@ -36,7 +36,7 @@ export default class Message extends Component {
         </div>
         <div className={`${prefix}__container`}>
           <div className={`${prefix}__name`}>
-            {isServiceMessage ? '妙小喵' : '高级用户'}{type}
+            {isServiceMessage ? '妙小喵' : '高级用户'}{key}
           </div>
           <div className={`${prefix}__content`}>{msg}</div>
         </div>

@@ -27,7 +27,7 @@ const initState = {
   optionsCardVisible: false,
   // 消息列表
   messages: mockMessages,
-  showMessages: [],
+  showMessages: _.takeRight(mockMessages, 10),
 };
 
 export default (state = initState, action) => {

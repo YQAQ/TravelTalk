@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import cx from 'classnames';
 import { connect } from 'react-redux';
-import { Drawer, NavBar, Button, Badge } from 'antd-mobile';
+import { Drawer, NavBar, Button, Badge, Icon as AntIcon } from 'antd-mobile';
 import _ from 'lodash';
 import shortid from 'shortid';
 import { Icon, Message } from '@/components';
@@ -27,21 +27,21 @@ class Talk extends Component {
   restHeight = null;
 
   componentDidMount = () => {
-    const { dispatch } = this.props;
-    setInterval(() => {
-      const type = Math.ceil(Math.random() * 10);
-      const data = {
-        msg: '你好啊，今天天气不错，不如出去看看啊.',
-        type,
-        key: shortid.generate(),
-      };
-      dispatch({
-        type: RECEIVE_NORMAL_MESSAGE,
-        payload: {
-          msg: data,
-        },
-      });
-    }, 5000);
+    // const { dispatch } = this.props;
+    // setInterval(() => {
+    //   const type = Math.ceil(Math.random() * 10);
+    //   const data = {
+    //     msg: '你好啊，今天天气不错，不如出去看看啊.',
+    //     type,
+    //     key: shortid.generate(),
+    //   };
+    //   dispatch({
+    //     type: RECEIVE_NORMAL_MESSAGE,
+    //     payload: {
+    //       msg: data,
+    //     },
+    //   });
+    // }, 5000);
   }
 
   componentDidUpdate = (prevProps) => {
@@ -183,14 +183,16 @@ class Talk extends Component {
     this.setState({
       loadingMoreLoading: true,
     });
-    this.restHeight = this.getRestHeight();
-    const { dispatch } = this.props;
-    dispatch({
-      type: LOAD_MORE_MESSAGE,
-    });
-    this.setState({
-      loadingMoreLoading: false,
-    });
+    setTimeout(() => {
+      this.restHeight = this.getRestHeight();
+      const { dispatch } = this.props;
+      dispatch({
+        type: LOAD_MORE_MESSAGE,
+      });
+      this.setState({
+        loadingMoreLoading: false,
+      });
+    }, 500);
   }
 
   /**
@@ -241,7 +243,7 @@ class Talk extends Component {
 
   render() {
     const { optionsCardVisible, messages } = this.props;
-    const { open, newMessageTipVisible } = this.state;
+    const { open, newMessageTipVisible, loadingMoreLoading } = this.state;
     const sidebar = this.renderSideBar();
     return (
       <div className="talk">
@@ -269,6 +271,14 @@ class Talk extends Component {
               className="talk__list"
               onScroll={this.handleListSrcoll}
             >
+              <div className="talk__list-load-more-loading">
+                {loadingMoreLoading ? (
+                  <React.Fragment>
+                    <AntIcon type="loading" color="red" size="xs" />
+                    <span>加载中...</span>
+                  </React.Fragment>
+                ) : null}
+              </div>
               <div className="talk__list-inner">
                 {messages.map((message) => {
                   return (

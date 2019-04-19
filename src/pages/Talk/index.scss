@@ -27,6 +27,15 @@
     &-inner {
       min-height: calc(100% + 1px);
     }
+    &-load-more-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 50px;
+      span {
+        padding-left: 10px;
+      }
+    }
   }
 
   &__options {
