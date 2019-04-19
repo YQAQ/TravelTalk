@@ -1,6 +1,9 @@
+import _ from 'lodash';
+import shortid from 'shortid';
 import {
   RECEIVE_NORMAL_MESSAGE,
   SEND_NORMAL_MESSAGE,
+  LOAD_MORE_MESSAGE,
 } from '../actions/types';
 
 const getMockMessages = (number = 100) => {
@@ -10,19 +13,21 @@ const getMockMessages = (number = 100) => {
     const data = {
       msg: '你好啊，今天天气不错，不如出去看看啊.',
       type,
+      key: shortid.generate(),
     };
     messages.push(data);
   }
   return messages;
 };
 
-const mockMessages = getMockMessages(100);
+const mockMessages = getMockMessages(1000);
 
 const initState = {
   // 选项卡的可见性
   optionsCardVisible: false,
   // 消息列表
   messages: mockMessages,
+  showMessages: [],
 };
 
 export default (state = initState, action) => {
@@ -30,6 +35,7 @@ export default (state = initState, action) => {
     case RECEIVE_NORMAL_MESSAGE: {
       const {
         messages: prevMessages,
+        showMessages: prevShowMessages,
         optionsCardVisible: prevOptionsCardVisible,
       } = state;
       const { payload } = action;
@@ -38,13 +44,35 @@ export default (state = initState, action) => {
       return {
         ...state,
         messages: prevMessages.concat(msg),
+        showMessages: prevShowMessages.concat(msg),
         optionsCardVisible: type <= 5 || prevOptionsCardVisible,
       };
     }
     case SEND_NORMAL_MESSAGE: {
+      const {
+        messages: prevMessages,
+        showMessages: prevShowMessages,
+      } = state;
+      const { payload } = action;
+      const { msg } = payload || {};
       return {
         ...state,
+        messages: prevMessages.concat(msg),
+        showMessages: prevShowMessages.concat(msg),
         optionsCardVisible: false,
+      };
+    }
+    case LOAD_MORE_MESSAGE: {
+      const { payload } = action;
+      const { num = 20 } = payload || {};
+      const { messages, showMessages } = state;
+      const allMessagesLength = messages.length;
+      const currentLength = showMessages.length;
+      const takeNumber = currentLength + num <= allMessagesLength ? currentLength + num : allMessagesLength;
+      const nextShowMessages = _.takeRight(messages, takeNumber);
+      return {
+        ...state,
+        showMessages: nextShowMessages,
       };
     }
     default:

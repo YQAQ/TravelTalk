@@ -14,7 +14,7 @@ import './style/antd.scss';
 // 移动端scrollTo方法中behavior属性的值为smoothscroll兼容性不好, 需使用此polyfill
 smoothscroll.polyfill();
 
-const store = configureStore({});
+export const store = configureStore({});
 
 ReactDOM.render(
   <Provider store={store}>

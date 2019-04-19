@@ -3,8 +3,13 @@ import cx from 'classnames';
 import { connect } from 'react-redux';
 import { Drawer, NavBar, Button, Badge } from 'antd-mobile';
 import _ from 'lodash';
+import shortid from 'shortid';
 import { Icon, Message } from '@/components';
-import { RECEIVE_NORMAL_MESSAGE, SEND_NORMAL_MESSAGE } from '@/actions/types';
+import {
+  RECEIVE_NORMAL_MESSAGE,
+  SEND_NORMAL_MESSAGE,
+  LOAD_MORE_MESSAGE,
+} from '@/actions/types';
 import { scrollYTo } from '@/utils/dom';
 import { FEATURES } from './constants';
 import './index.scss';
@@ -14,26 +19,29 @@ class Talk extends Component {
     open: false, // Drawer的open属性
     list: [],
     newMessageTipVisible: false,
+    loadingMoreLoading: false,
   };
 
   scrollTop = 0;
   scrollY = 0;
+  restHeight = null;
 
   componentDidMount = () => {
-    // const { dispatch } = this.props;
-    // setInterval(() => {
-    //   const type = Math.ceil(Math.random() * 10);
-    //   const data = {
-    //     msg: '你好啊，今天天气不错，不如出去看看啊.',
-    //     type,
-    //   };
-    //   dispatch({
-    //     type: RECEIVE_NORMAL_MESSAGE,
-    //     payload: {
-    //       msg: data,
-    //     },
-    //   });
-    // }, 1000);
+    const { dispatch } = this.props;
+    setInterval(() => {
+      const type = Math.ceil(Math.random() * 10);
+      const data = {
+        msg: '你好啊，今天天气不错，不如出去看看啊.',
+        type,
+        key: shortid.generate(),
+      };
+      dispatch({
+        type: RECEIVE_NORMAL_MESSAGE,
+        payload: {
+          msg: data,
+        },
+      });
+    }, 5000);
   }
 
   componentDidUpdate = (prevProps) => {
@@ -43,6 +51,8 @@ class Talk extends Component {
       this.autoScroll();
       // this.setNewMessageTip();
     }
+    // 上拉加载更多时保持页面位置没有视觉上的变化
+    this.restorePosition();
   }
 
   getListContainer = () => {
@@ -50,27 +60,30 @@ class Talk extends Component {
   };
 
   getListContainerScrollTop = () => {
-    const list = this.getListContainer();
-    if (!list) {
+    const listContainer = this.getListContainer();
+    if (!listContainer) {
       return 0;
     } 
-    return list.scrollTop;
+    return listContainer.scrollTop;
   }
 
   /**
-   * 当前可视区域离底部的滚动距离不超过一屏时会自动滚到新消息处
+   * 当前可视区域离底部的滚动距离不超过10px时会自动滚到新消息处
    */
   autoScroll = () => {
     const listContainer = this.getListContainer();
-    const { clientHeight, scrollTop, scrollHeight } = listContainer || {};
-    if (scrollHeight - clientHeight - scrollTop < clientHeight) {
+    const listItems = listContainer.querySelectorAll('.talk__list-item');
+    const lastListItem = _.last(listItems);
+    const lastItemHeight = lastListItem.clientHeight;
+    const { clientHeight, scrollTop, scrollHeight } = listContainer;
+    if (scrollHeight - clientHeight - scrollTop - lastItemHeight <= 10) {
       this.scrollToBottom();
     }
   }
 
   setNewMessageTip = () => {
     const listContainer = this.getListContainer();
-    const { clientHeight, scrollTop, scrollHeight } = listContainer || {};
+    const { clientHeight, scrollTop, scrollHeight } = listContainer;
     if (scrollHeight - clientHeight - scrollTop > 30) {
       this.setState({
         newMessageTipVisible: true,
@@ -89,8 +102,8 @@ class Talk extends Component {
    */
   updateListContainerStyles = () => {
     const options = document.querySelector('.talk .talk__options');
-    const list = document.querySelector('.talk__list');
-    if (!options || !list) {
+    const listContainer = this.getListContainer();
+    if (!options || !listContainer) {
       return;
     }
     try {
@@ -99,8 +112,8 @@ class Talk extends Component {
       const height = styles.height.replace('px', '') - 0;
       const transformY = _.last(transform.split(' ')).replace(')', '') - 0 || 0;
       const offset = height - transformY;
-      list.style.height = `calc(100% - ${offset}px)`;
-      list.scrollTop = this.scrollTop + offset;
+      listContainer.style.height = `calc(100% - ${offset}px)`;
+      listContainer.scrollTop = this.scrollTop + offset;
     } catch (error) {
       console.log(error);
     }
@@ -150,16 +163,70 @@ class Talk extends Component {
     if (this.animating) {
       return;
     }
-    // const currentScrollTop = e.target.scrollTop;
-    // const offset = currentScrollTop - this.scrollY;
-    // this.scrollY = currentScrollTop;
-    // const direction = offset > 0 ? 1 : -1;
+    const scrollTop = e.target.scrollTop;
+    if (scrollTop === 0) {
+      this.handleLoadMore();
+    }
+    const offset = scrollTop - this.scrollY;
+    this.scrollY = scrollTop;
+    // 滚动方向
+    const direction = offset > 0 ? 1 : -1;
+  }
+
+  /**
+   * 加载更多
+   */
+  handleLoadMore = () => {
+    if (this.state.loadingMoreLoading) {
+      return false;
+    }
+    this.setState({
+      loadingMoreLoading: true,
+    });
+    this.restHeight = this.getRestHeight();
+    const { dispatch } = this.props;
+    dispatch({
+      type: LOAD_MORE_MESSAGE,
+    });
+    this.setState({
+      loadingMoreLoading: false,
+    });
+  }
+
+  /**
+   * 获取可滚动区域底部据页面可视区域底部的高度
+   */
+  getRestHeight = () => {
+    const listContainer = this.getListContainer();
+    const { scrollHeight, clientHeight, scrollTop } = listContainer || {};
+    return scrollHeight - scrollTop - clientHeight;
+  }
+
+  /**
+   * 根据上拉加载更多时记录的高度还原页面位置
+   */
+  restorePosition = () => {
+    if (!this.restHeight) {
+      return false;
+    }
+    const listContainer = this.getListContainer();
+    const { clientHeight, scrollHeight } = listContainer || {};
+    const scrollTop = scrollHeight - this.restHeight - clientHeight;
+    this.restHeight = null;
+    listContainer.scrollTop = scrollTop;
   }
 
   sendMessage = () => {
     const { dispatch } = this.props;
     dispatch({
       type: SEND_NORMAL_MESSAGE,
+      payload: {
+        msg: {
+          type: 9,
+          msg: '好的 好的 我收到了 已确认',
+          key: shortid.generate(),
+        },
+      },
     });
     this.scrollToBottom();
   }
@@ -171,17 +238,6 @@ class Talk extends Component {
       </div>
     );
   };
-
-  renderMessageRow = ({ index }) => {
-    const { messages } = this.props;
-    const message = messages[index];
-    return (
-      <Message
-        className="talk__list-item"
-        data={message}
-      />
-    );
-  }
 
   render() {
     const { optionsCardVisible, messages } = this.props;
@@ -214,11 +270,11 @@ class Talk extends Component {
               onScroll={this.handleListSrcoll}
             >
               <div className="talk__list-inner">
-                {messages.map((message, index) => {
+                {messages.map((message) => {
                   return (
                     <Message
                       className="talk__list-item"
-                      key={index}
+                      key={message.key}
                       data={message}
                     />
                   );
@@ -270,9 +326,14 @@ class Talk extends Component {
 
 const mapStateToProps = (state) => {
   const { talk } = state;
-  const { messages = [], optionsCardVisible } = talk || {};
+  const {
+    showMessages = [],
+    optionsCardVisible,
+    messages: allMessages,
+  } = talk || {};
   return {
-    messages,
+    allMessages,
+    messages: showMessages,
     optionsCardVisible,
   };
 };
