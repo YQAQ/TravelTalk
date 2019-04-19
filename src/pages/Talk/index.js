@@ -1,44 +1,47 @@
 import React, { Component } from 'react';
 import cx from 'classnames';
 import { connect } from 'react-redux';
-import { Drawer, NavBar } from 'antd-mobile';
+import { Drawer, NavBar, Button, Badge } from 'antd-mobile';
 import _ from 'lodash';
-import { Icon } from '@/components';
+import { Icon, Message } from '@/components';
 import { RECEIVE_NORMAL_MESSAGE, SEND_NORMAL_MESSAGE } from '@/actions/types';
 import { scrollYTo } from '@/utils/dom';
+import { FEATURES } from './constants';
 import './index.scss';
 
 class Talk extends Component {
   state = {
     open: false, // Drawer的open属性
     list: [],
+    newMessageTipVisible: false,
   };
 
   scrollTop = 0;
   scrollY = 0;
 
   componentDidMount = () => {
-    const { dispatch } = this.props;
-    setInterval(() => {
-      const type = Math.ceil(Math.random() * 10);
-      const data = {
-        msg: '你好啊，今天天气不错，不如出去看看啊.',
-        type,
-      };
-      dispatch({
-        type: RECEIVE_NORMAL_MESSAGE,
-        payload: {
-          msg: data,
-        },
-      });
-    }, 1000);
+    // const { dispatch } = this.props;
+    // setInterval(() => {
+    //   const type = Math.ceil(Math.random() * 10);
+    //   const data = {
+    //     msg: '你好啊，今天天气不错，不如出去看看啊.',
+    //     type,
+    //   };
+    //   dispatch({
+    //     type: RECEIVE_NORMAL_MESSAGE,
+    //     payload: {
+    //       msg: data,
+    //     },
+    //   });
+    // }, 1000);
   }
 
   componentDidUpdate = (prevProps) => {
     const { messages: prevMessages } = prevProps;
     const { messages } = this.props;
     if (prevMessages.length !== messages.length) {
-      console.log('有新消息');
+      this.autoScroll();
+      // this.setNewMessageTip();
     }
   }
 
@@ -47,11 +50,32 @@ class Talk extends Component {
   };
 
   getListContainerScrollTop = () => {
-    const list = document.querySelector('.talk__list');
+    const list = this.getListContainer();
     if (!list) {
       return 0;
     } 
     return list.scrollTop;
+  }
+
+  /**
+   * 当前可视区域离底部的滚动距离不超过一屏时会自动滚到新消息处
+   */
+  autoScroll = () => {
+    const listContainer = this.getListContainer();
+    const { clientHeight, scrollTop, scrollHeight } = listContainer || {};
+    if (scrollHeight - clientHeight - scrollTop < clientHeight) {
+      this.scrollToBottom();
+    }
+  }
+
+  setNewMessageTip = () => {
+    const listContainer = this.getListContainer();
+    const { clientHeight, scrollTop, scrollHeight } = listContainer || {};
+    if (scrollHeight - clientHeight - scrollTop > 30) {
+      this.setState({
+        newMessageTipVisible: true,
+      });
+    }
   }
 
   handleOpenChange = () => {
@@ -60,6 +84,9 @@ class Talk extends Component {
     });
   }
 
+  /**
+   * 动态改变列表容器的高度与scrollTop, 模拟向上推的感觉
+   */
   updateListContainerStyles = () => {
     const options = document.querySelector('.talk .talk__options');
     const list = document.querySelector('.talk__list');
@@ -92,13 +119,18 @@ class Talk extends Component {
     }
   }
 
-  scrollToNewMessage = () => {
-    const listContainer = this.getListContainer();
-    listContainer.scrollTop = 10000000;
-    const list = document.querySelectorAll('.talk__list-item');
-    const newMessage = _.last(list);
+  scrollToBottom = () => {
     setTimeout(() => {
-      scrollYTo(listContainer, newMessage, { behavior: 'smooth' });
+      const listContainer = this.getListContainer();
+      const bottomElement = listContainer && listContainer.querySelector('.talk__list-placeholer');
+      scrollYTo(listContainer, bottomElement, { behavior: 'smooth' });
+    }, 300);
+  }
+
+  scrollToNewMessage = () => {
+    this.scrollToBottom();
+    this.setState({
+      newMessageTipVisible: false,
     });
   }
 
@@ -124,6 +156,14 @@ class Talk extends Component {
     // const direction = offset > 0 ? 1 : -1;
   }
 
+  sendMessage = () => {
+    const { dispatch } = this.props;
+    dispatch({
+      type: SEND_NORMAL_MESSAGE,
+    });
+    this.scrollToBottom();
+  }
+
   renderSideBar = () => {
     return (
       <div className="talk__sidebar">
@@ -132,9 +172,20 @@ class Talk extends Component {
     );
   };
 
+  renderMessageRow = ({ index }) => {
+    const { messages } = this.props;
+    const message = messages[index];
+    return (
+      <Message
+        className="talk__list-item"
+        data={message}
+      />
+    );
+  }
+
   render() {
     const { optionsCardVisible, messages } = this.props;
-    const { open } = this.state;
+    const { open, newMessageTipVisible } = this.state;
     const sidebar = this.renderSideBar();
     return (
       <div className="talk">
@@ -149,7 +200,7 @@ class Talk extends Component {
             />
           )}
         >
-          正在输入...
+          列表消息数{messages.length}
         </NavBar>
         <Drawer
           className="talk__drawer"
@@ -163,13 +214,17 @@ class Talk extends Component {
               onScroll={this.handleListSrcoll}
             >
               <div className="talk__list-inner">
-                {messages.map(({ msg, type }, index) => {
+                {messages.map((message, index) => {
                   return (
-                    <div className="talk__list-item" key={index}>
-                      <span>{type}{msg}</span>
-                    </div>
+                    <Message
+                      className="talk__list-item"
+                      key={index}
+                      data={message}
+                    />
                   );
                 })}
+                {/* 占位元素, 方便滚动到底部 */}
+                <div className="talk__list-placeholer" />
               </div>
             </div>
             <div
@@ -180,14 +235,31 @@ class Talk extends Component {
               onAnimationEnd={this.handleAnimationEnd}
             >
               <div className="talk__options-content">
-                <p>选项1</p>
-                <p>选项1</p>
-                <p>选项1</p>
-                <p>选项1</p>
-                <p>选项1</p>
-                <p>选项1</p>
-                <p>选项1</p>
+                <div className="dynamic-options">
+                  {FEATURES.map((feature) => {
+                    return (
+                      <Button
+                        className="dynamic-options__item"
+                        key={feature}
+                        onClick={this.sendMessage}
+                      >
+                        {feature}
+                      </Button>
+                    );
+                  })}
+                </div>
+                <div className="fixed-options">
+                  <Button>购物车</Button>
+                  <Button>更多功能</Button>
+                </div>
               </div>
+              {newMessageTipVisible ? (
+                <Badge
+                  className="talk__new-message-tip"
+                  text="新消息"
+                  onClick={this.scrollToNewMessage}
+                />
+              ) : null}
             </div>
           </div>
         </Drawer>
