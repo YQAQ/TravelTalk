@@ -18,8 +18,13 @@ export default class Message extends Component {
   };
 
   render() {
-    const { prefix, className, data } = this.props;
-    const { msg, type } = data;
+    const {
+      prefix,
+      className,
+      data,
+      ...otherProps
+    } = this.props;
+    const { msg, type, height } = data;
     const isServiceMessage = type < 8;
     const avatar = isServiceMessage ? mioji_avatar : user_avatar;
     const classes = cx(prefix, className, {
@@ -27,7 +32,7 @@ export default class Message extends Component {
       [`${prefix}-user`]: !isServiceMessage,
     });
     return (
-      <div className={classes}>
+      <div className={classes} {...otherProps}>
         <div
           className={`${prefix}__avatar`}
           style={{ backgroundColor: isServiceMessage ? '#5581fa' : '#ff94b4' }}
@@ -39,6 +44,7 @@ export default class Message extends Component {
             {isServiceMessage ? '妙小喵' : '高级用户'}{type}
           </div>
           <div className={`${prefix}__content`}>{msg}</div>
+          <div style={{ height, backgroundColor: 'skyblue', width: 30 }} />
         </div>
       </div>
     );

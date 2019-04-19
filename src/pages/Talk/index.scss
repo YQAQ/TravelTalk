@@ -22,8 +22,8 @@
   &__list {
     position: relative;
     height: 100%;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
+    // overflow: auto;
+    // -webkit-overflow-scrolling: touch;
     &-inner {
       min-height: calc(100% + 1px);
     }
@@ -80,6 +80,10 @@
     position: absolute;
     right: 20px;
     top: -10px;
+  }
+
+  .ReactVirtualized__List {
+    -webkit-overflow-scrolling: touch;
   }
 }
 

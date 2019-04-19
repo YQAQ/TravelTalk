@@ -3,37 +3,45 @@ import cx from 'classnames';
 import { connect } from 'react-redux';
 import { Drawer, NavBar, Button, Badge } from 'antd-mobile';
 import _ from 'lodash';
+import List from 'react-virtualized/dist/commonjs/List';
+import AutoSizer from 'react-virtualized/dist/commonjs/AutoSizer';
+import { CellMeasurer, CellMeasurerCache } from 'react-virtualized/dist/commonjs/CellMeasurer';
 import { Icon, Message } from '@/components';
 import { RECEIVE_NORMAL_MESSAGE, SEND_NORMAL_MESSAGE } from '@/actions/types';
 import { scrollYTo } from '@/utils/dom';
 import { FEATURES } from './constants';
 import './index.scss';
 
+const cache = new CellMeasurerCache({
+  fixedWidth: true,
+});
+
 class Talk extends Component {
   state = {
     open: false, // Drawer的open属性
     list: [],
     newMessageTipVisible: false,
+    scrollToIndex: undefined,
   };
 
   scrollTop = 0;
   scrollY = 0;
 
   componentDidMount = () => {
-    // const { dispatch } = this.props;
-    // setInterval(() => {
-    //   const type = Math.ceil(Math.random() * 10);
-    //   const data = {
-    //     msg: '你好啊，今天天气不错，不如出去看看啊.',
-    //     type,
-    //   };
-    //   dispatch({
-    //     type: RECEIVE_NORMAL_MESSAGE,
-    //     payload: {
-    //       msg: data,
-    //     },
-    //   });
-    // }, 1000);
+    const { dispatch } = this.props;
+    setInterval(() => {
+      const type = Math.ceil(Math.random() * 10);
+      const data = {
+        msg: '你好啊，今天天气不错，不如出去看看啊.',
+        type,
+      };
+      dispatch({
+        type: RECEIVE_NORMAL_MESSAGE,
+        payload: {
+          msg: data,
+        },
+      });
+    }, 3000);
   }
 
   componentDidUpdate = (prevProps) => {
@@ -57,15 +65,26 @@ class Talk extends Component {
     return list.scrollTop;
   }
 
+  getRowHeight = () => {
+    return 140;
+  }
+
   /**
    * 当前可视区域离底部的滚动距离不超过一屏时会自动滚到新消息处
    */
   autoScroll = () => {
-    const listContainer = this.getListContainer();
-    const { clientHeight, scrollTop, scrollHeight } = listContainer || {};
-    if (scrollHeight - clientHeight - scrollTop < clientHeight) {
-      this.scrollToBottom();
-    }
+    setTimeout(() => {
+      const listContainer = this.getListContainer();
+      const { clientHeight } = listContainer || {};
+      const container = document.querySelector('.ReactVirtualized__Grid__innerScrollContainer');
+      const height = parseInt(container.style.height, 10);
+      const lists = document.querySelectorAll('.talk__list-item');
+      const lastList = _.last(lists);
+      const lastListTop = parseInt(lastList.style.top, 10);
+      if (height - lastListTop < clientHeight) {
+        this.scrollToBottom();
+      }
+    }, 100);
   }
 
   setNewMessageTip = () => {
@@ -82,6 +101,7 @@ class Talk extends Component {
     this.setState({
       open: !this.state.open,
     });
+    this.scrollToBottom();
   }
 
   /**
@@ -120,11 +140,18 @@ class Talk extends Component {
   }
 
   scrollToBottom = () => {
+    // setTimeout(() => {
+    //   const listContainer = this.getListContainer();
+    //   const bottomElement = listContainer && listContainer.querySelector('.talk__list-placeholer');
+    //   scrollYTo(listContainer, bottomElement, { behavior: 'smooth' });
+    // }, 300);
     setTimeout(() => {
-      const listContainer = this.getListContainer();
-      const bottomElement = listContainer && listContainer.querySelector('.talk__list-placeholer');
-      scrollYTo(listContainer, bottomElement, { behavior: 'smooth' });
-    }, 300);
+      const { messages } = this.props;
+      const length = messages.length;
+      this.setState({
+        scrollToIndex: length - 1,
+      });
+    }, 200);
   }
 
   scrollToNewMessage = () => {
@@ -172,20 +199,30 @@ class Talk extends Component {
     );
   };
 
-  renderMessageRow = ({ index }) => {
+  renderMessageRow = ({ index, key, parent, style }) => {
     const { messages } = this.props;
     const message = messages[index];
     return (
-      <Message
-        className="talk__list-item"
-        data={message}
-      />
+      <CellMeasurer
+        cache={cache}
+        columnIndex={0}
+        key={key}
+        parent={parent}
+        rowIndex={index}
+      >
+        <Message
+          className="talk__list-item"
+          style={style}
+          data={message}
+        />
+      </CellMeasurer>
     );
   }
 
   render() {
     const { optionsCardVisible, messages } = this.props;
-    const { open, newMessageTipVisible } = this.state;
+    const { open, newMessageTipVisible, scrollToIndex } = this.state;
+    const rowCount = messages.length;
     const sidebar = this.renderSideBar();
     return (
       <div className="talk">
@@ -213,19 +250,32 @@ class Talk extends Component {
               className="talk__list"
               onScroll={this.handleListSrcoll}
             >
-              <div className="talk__list-inner">
-                {messages.map((message, index) => {
+              <AutoSizer>
+                {({ width, height }) => {
                   return (
-                    <Message
-                      className="talk__list-item"
-                      key={index}
-                      data={message}
+                    <List
+                      height={height}
+                      rowCount={rowCount}
+                      rowHeight={cache.rowHeight}
+                      deferredMeasurementCache={cache}
+                      rowRenderer={this.renderMessageRow}
+                      width={width}
+                      scrollToIndex={scrollToIndex}
                     />
                   );
-                })}
-                {/* 占位元素, 方便滚动到底部 */}
-                <div className="talk__list-placeholer" />
-              </div>
+                }}
+              </AutoSizer>
+              {/* <div className="talk__list-inner">
+                <List
+                  height={300}
+                  rowCount={rowCount}
+                  rowHeight={this.getRowHeight}
+                  rowRenderer={this.renderMessageRow}
+                  width={window.innerWidth}
+                />
+              </div> */}
+              {/* 占位元素, 方便滚动到底部 */}
+              <div className="talk__list-placeholer" />
             </div>
             <div
               className={cx('talk__options', {

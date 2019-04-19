@@ -7,16 +7,18 @@ const getMockMessages = (number = 100) => {
   const messages = [];
   for (let i = 0; i < number; i++) {
     const type = Math.ceil(Math.random() * 10);
+    const height = Math.ceil(Math.random() * 10) * 10;
     const data = {
       msg: '你好啊，今天天气不错，不如出去看看啊.',
       type,
+      height,
     };
     messages.push(data);
   }
   return messages;
 };
 
-const mockMessages = getMockMessages(100);
+const mockMessages = getMockMessages(0);
 
 const initState = {
   // 选项卡的可见性
