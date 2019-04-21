@@ -4,6 +4,7 @@ import {
   RECEIVE_NORMAL_MESSAGE,
   SEND_NORMAL_MESSAGE,
   LOAD_MORE_MESSAGE,
+  SET_SHOW_MESSAGES,
 } from '../actions/types';
 
 const getMockMessages = (number = 100) => {
@@ -62,14 +63,25 @@ export default (state = initState, action) => {
         optionsCardVisible: false,
       };
     }
+    case SET_SHOW_MESSAGES: {
+      const { payload } = action;
+      const { num = 20 } = payload || {};
+      const { messages } = state;
+      const takeNum = _.min([messages.length, num]);
+      const showMessages = _.takeRight(messages, takeNum);
+      return {
+        ...state,
+        showMessages,
+      };
+    }
     case LOAD_MORE_MESSAGE: {
       const { payload } = action;
       const { num = 20 } = payload || {};
       const { messages, showMessages } = state;
       const allMessagesLength = messages.length;
       const currentLength = showMessages.length;
-      const takeNumber = currentLength + num <= allMessagesLength ? currentLength + num : allMessagesLength;
-      const nextShowMessages = _.takeRight(messages, takeNumber);
+      const takeNum = currentLength + num <= allMessagesLength ? currentLength + num : allMessagesLength;
+      const nextShowMessages = _.takeRight(messages, takeNum);
       return {
         ...state,
         showMessages: nextShowMessages,

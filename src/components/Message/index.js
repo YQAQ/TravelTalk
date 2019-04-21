@@ -3,6 +3,7 @@
  */
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import _ from 'lodash';
 import cx from 'classnames';
 import mioji_avatar from '@/assets/images/avatar/mioji_avatar.png';
 import user_avatar from '@/assets/images/avatar/user_avatar.png';
@@ -16,6 +17,10 @@ export default class Message extends Component {
   static defaultProps = {
     prefix: 'mui-message',
   };
+
+  sholdComponentUpdate = (nextProps) => {
+    return !_.isEqual(this.props, nextProps);
+  }
 
   render() {
     const { prefix, className, data } = this.props;
