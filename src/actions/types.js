@@ -1,6 +1,7 @@
 export const INCREMENT = 'INCREMENT';
 export const DECREMENT = 'DECREMENT';
 
+// 主动获取消息
 export const GET_MESSAGES = 'GET_MESSAGES';
 export const GET_MESSAGES_SUCCESS = 'GET_MESSAGES_SUCCESS';
 export const GET_MESSAGE_FAIL = 'GET_MESSAGE_FAIL';

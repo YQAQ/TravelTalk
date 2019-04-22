@@ -1,15 +1,12 @@
 import React, { Suspense } from 'react';
+import { Loading } from '@/components';
 
-const Loading = () => {
-  return (
-    <div>loading...</div>
-  );
-};
+const { FullPageLoading } = Loading;
 
-const withSuspense = (Component) => {
+const withSuspense = (Component, fallback) => {
   return (props) => {
     return (
-      <Suspense fallback={<Loading />}>
+      <Suspense fallback={fallback || <FullPageLoading />}>
         <Component {...props} />
       </Suspense>
     );

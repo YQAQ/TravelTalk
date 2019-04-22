@@ -16,7 +16,7 @@ import {
 } from './utils';
 import './index.scss';
 
-const { ListLoading } = Loading;
+const { FullPageLoading } = Loading;
 
 class Talk extends Component {
   state = {
@@ -29,8 +29,7 @@ class Talk extends Component {
   };
 
   scrollTop = 0;
-  scrollY = 0;
-  restHeight = null;
+  scrollRestHeight = null;
   isLoadingMore = false;
   isReseting = false;
   tempOptiosCardVisibleChanging = false;
@@ -44,9 +43,8 @@ class Talk extends Component {
   componentDidUpdate = (prevProps) => {
     const { messages: prevMessages } = prevProps;
     const { messages } = this.props;
-    if (prevMessages.length !== messages.length) {
+    if (this.checkHasNewMessage(prevMessages, messages)) {
       autoScrollToBottom();
-      // this.setNewMessageTip();
     }
     // 上拉加载更多时保持页面位置没有视觉上的变化
     this.restorePosition();
@@ -76,10 +74,22 @@ class Talk extends Component {
       });
   }
 
-  bindEvent = () => {
-    document.addEventListener('touchstart', this.handleTouchStart);
-    document.addEventListener('touchmove', this.handleTouchMove);
-    document.addEventListener('touchend', this.handleTouchEnd);
+  /**
+   * 判断是否有新消息
+   */
+  checkHasNewMessage = (prevMessages, currentMessages) => {
+    const { loading } = this.state;
+    // 列表初始化的时候不考虑
+    if (loading || !currentMessages || !currentMessages.length) {
+      return false;
+    }
+    const lastPrevMessage = _.last(prevMessages) || {};
+    const lastCurrentMessage = _.last(currentMessages) || {};
+    // 当前最后一条消息的key不等于上次最后一条消息的key
+    if (lastPrevMessage.key !== lastCurrentMessage.key) {
+      return true;
+    }
+    return false;
   }
 
   setNewMessageTip = () => {
@@ -155,6 +165,7 @@ class Talk extends Component {
   }
 
   handleListSrcoll = (e) => {
+    // 由底部操作区域引起的滚动不考虑
     if (this.animating) {
       return;
     }
@@ -166,10 +177,6 @@ class Talk extends Component {
       // 滚动到底部重置用于显示的消息
       this.handleResetShowMessages();
     }
-    const offset = scrollTop - this.scrollY;
-    this.scrollY = scrollTop;
-    // 滚动方向
-    const direction = offset > 0 ? 1 : -1;
   }
 
   handleTempOptionsCardVisible = (direction) => {
@@ -212,7 +219,7 @@ class Talk extends Component {
     });
     clearTimeout(this.loadTimer);
     this.loadTimer = setTimeout(() => {
-      this.restHeight = getScrollRestHeight();
+      this.scrollRestHeight = getScrollRestHeight();
       const { loadMoreMessages } = this.props;
       loadMoreMessages();
       this.setState({
@@ -226,13 +233,13 @@ class Talk extends Component {
    * 根据上拉加载更多时记录的高度还原页面位置
    */
   restorePosition = () => {
-    if (!this.restHeight) {
+    if (!this.scrollRestHeight) {
       return false;
     }
     const listContainer = getListContainer();
     const { clientHeight, scrollHeight } = listContainer || {};
-    const scrollTop = scrollHeight - this.restHeight - clientHeight;
-    this.restHeight = null;
+    const scrollTop = scrollHeight - this.scrollRestHeight - clientHeight;
+    this.scrollRestHeight = null;
     listContainer.scrollTop = scrollTop;
   }
 
@@ -302,11 +309,6 @@ class Talk extends Component {
               // onTouchMove={this.handleTouchMove}
               // onTouchEnd={this.handleTouchEnd}
             >
-              {loading ? (
-                <div className="talk__list-loading">
-                  <ListLoading />
-                </div>
-              ) : null}
               <div className="talk__list-load-more-loading">
                 {loadingMoreLoading ? (
                   <React.Fragment>
@@ -365,6 +367,9 @@ class Talk extends Component {
             </div>
           </div>
         </Drawer>
+        {loading ? (
+          <FullPageLoading />
+        ) : null}
       </div>
     );
   }
