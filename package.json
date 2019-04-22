@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "antd-mobile": "^2.2.11",
+    "axios": "^0.18.0",
     "classnames": "^2.2.6",
     "connected-react-router": "^6.4.0",
     "history": "^4.9.0",

@@ -3,17 +3,20 @@ import cx from 'classnames';
 import { connect } from 'react-redux';
 import { Drawer, NavBar, Button, Badge, Icon as AntIcon } from 'antd-mobile';
 import _ from 'lodash';
-import shortid from 'shortid';
-import { Icon, Message } from '@/components';
-import {
-  RECEIVE_NORMAL_MESSAGE,
-  SEND_NORMAL_MESSAGE,
-  LOAD_MORE_MESSAGE,
-  SET_SHOW_MESSAGES,
-} from '@/actions/types';
-import { scrollYTo } from '@/utils/dom';
+import { Icon, Message, Loading } from '@/components';
+import * as apis from '@/actions/api';
+import * as talkActions from '@/actions/talk';
 import { FEATURES } from './constants';
+import {
+  getListContainer,
+  getListContainerInfo,
+  asyncSrcollToBottom,
+  autoScrollToBottom,
+  getScrollRestHeight,
+} from './utils';
 import './index.scss';
+
+const { ListLoading } = Loading;
 
 class Talk extends Component {
   state = {
@@ -22,6 +25,7 @@ class Talk extends Component {
     newMessageTipVisible: false,
     loadingMoreLoading: false,
     tempOptiosCardVisible: true,
+    loading: true,
   };
 
   scrollTop = 0;
@@ -34,33 +38,42 @@ class Talk extends Component {
   offsetY = null;
 
   componentDidMount = () => {
-    // const { dispatch } = this.props;
-    // setInterval(() => {
-    //   const type = Math.ceil(Math.random() * 10);
-    //   const data = {
-    //     msg: '你好啊，今天天气不错，不如出去看看啊.',
-    //     type,
-    //     key: shortid.generate(),
-    //   };
-    //   dispatch({
-    //     type: RECEIVE_NORMAL_MESSAGE,
-    //     payload: {
-    //       msg: data,
-    //     },
-    //   });
-    // }, 3000);
-    // this.bindEvent();
+    this.initTalkList();
   }
 
   componentDidUpdate = (prevProps) => {
     const { messages: prevMessages } = prevProps;
     const { messages } = this.props;
     if (prevMessages.length !== messages.length) {
-      this.autoScroll();
+      autoScrollToBottom();
       // this.setNewMessageTip();
     }
     // 上拉加载更多时保持页面位置没有视觉上的变化
     this.restorePosition();
+  }
+
+  /**
+   * 初始化聊天消息
+   */
+  initTalkList = () => {
+    const { getMessages } = this.props;
+    getMessages({
+      stat_id: '0000_0',
+      store: {},
+    })
+      .then(() => {
+        asyncSrcollToBottom(1000, 'instant')
+          .then(() => {
+            this.setState({
+              loading: false,
+            });
+          });
+      })
+      .catch(() => {
+        this.setState({
+          loading: false,
+        });
+      });
   }
 
   bindEvent = () => {
@@ -69,34 +82,8 @@ class Talk extends Component {
     document.addEventListener('touchend', this.handleTouchEnd);
   }
 
-  getListContainer = () => {
-    return document.querySelector('.talk__list');
-  };
-
-  getListContainerScrollTop = () => {
-    const listContainer = this.getListContainer();
-    if (!listContainer) {
-      return 0;
-    } 
-    return listContainer.scrollTop;
-  }
-
-  /**
-   * 当前可视区域离底部的滚动距离不超过10px时会自动滚到新消息处
-   */
-  autoScroll = () => {
-    const listContainer = this.getListContainer();
-    const listItems = listContainer.querySelectorAll('.talk__list-item');
-    const lastListItem = _.last(listItems);
-    const lastItemHeight = lastListItem.clientHeight;
-    const { clientHeight, scrollTop, scrollHeight } = listContainer;
-    if (scrollHeight - clientHeight - scrollTop - lastItemHeight <= 10) {
-      this.scrollToBottom();
-    }
-  }
-
   setNewMessageTip = () => {
-    const listContainer = this.getListContainer();
+    const listContainer = getListContainer();
     const { clientHeight, scrollTop, scrollHeight } = listContainer;
     if (scrollHeight - clientHeight - scrollTop > 30) {
       this.setState({
@@ -116,7 +103,7 @@ class Talk extends Component {
    */
   updateListContainerStyles = () => {
     const options = document.querySelector('.talk .talk__options');
-    const listContainer = this.getListContainer();
+    const listContainer = getListContainer();
     if (!options || !listContainer) {
       return;
     }
@@ -147,23 +134,15 @@ class Talk extends Component {
     }
   }
 
-  scrollToBottom = () => {
-    setTimeout(() => {
-      const listContainer = this.getListContainer();
-      const bottomElement = listContainer && listContainer.querySelector('.talk__list-placeholer');
-      scrollYTo(listContainer, bottomElement, { behavior: 'smooth' });
-    }, 300);
-  }
-
   scrollToNewMessage = () => {
-    this.scrollToBottom();
+    asyncSrcollToBottom();
     this.setState({
       newMessageTipVisible: false,
     });
   }
 
   handleAnimationStart = () => {
-    const scrollTop = this.getListContainerScrollTop();
+    const { scrollTop } = getListContainerInfo();
     this.scrollTop = scrollTop;
     this.animating = true;
     this.startUpdateListContainerStyles();
@@ -208,16 +187,14 @@ class Talk extends Component {
   };
 
   handleResetShowMessages = () => {
-    const { messages } = this.props;
+    const { messages, resetShowMessages } = this.props;
     if (this.isReseting || messages.length <= 20) {
       return false;
     }
     clearTimeout(this.resetTimer);
     this.isReseting = true;
     this.resetTimer = setTimeout(() => {
-      this.props.dispatch({
-        type: SET_SHOW_MESSAGES,
-      });
+      resetShowMessages();
       this.isReseting = false;
     }, 500);
   }
@@ -235,25 +212,14 @@ class Talk extends Component {
     });
     clearTimeout(this.loadTimer);
     this.loadTimer = setTimeout(() => {
-      this.restHeight = this.getRestHeight();
-      const { dispatch } = this.props;
-      dispatch({
-        type: LOAD_MORE_MESSAGE,
-      });
+      this.restHeight = getScrollRestHeight();
+      const { loadMoreMessages } = this.props;
+      loadMoreMessages();
       this.setState({
         loadingMoreLoading: false,
       });
       this.isLoadingMore = false;
     }, 300);
-  }
-
-  /**
-   * 获取可滚动区域底部据页面可视区域底部的高度
-   */
-  getRestHeight = () => {
-    const listContainer = this.getListContainer();
-    const { scrollHeight, clientHeight, scrollTop } = listContainer || {};
-    return scrollHeight - scrollTop - clientHeight;
   }
 
   /**
@@ -263,7 +229,7 @@ class Talk extends Component {
     if (!this.restHeight) {
       return false;
     }
-    const listContainer = this.getListContainer();
+    const listContainer = getListContainer();
     const { clientHeight, scrollHeight } = listContainer || {};
     const scrollTop = scrollHeight - this.restHeight - clientHeight;
     this.restHeight = null;
@@ -286,18 +252,7 @@ class Talk extends Component {
   }
 
   sendMessage = () => {
-    const { dispatch } = this.props;
-    dispatch({
-      type: SEND_NORMAL_MESSAGE,
-      payload: {
-        msg: {
-          type: 9,
-          msg: '好的 好的 我收到了 已确认',
-          key: shortid.generate(),
-        },
-      },
-    });
-    this.scrollToBottom();
+    
   }
 
   renderSideBar = () => {
@@ -310,7 +265,13 @@ class Talk extends Component {
 
   render() {
     const { optionsCardVisible, messages, allMessages } = this.props;
-    const { open, newMessageTipVisible, loadingMoreLoading, tempOptiosCardVisible } = this.state;
+    const {
+      open,
+      newMessageTipVisible,
+      loadingMoreLoading,
+      tempOptiosCardVisible,
+      loading,
+    } = this.state;
     const sidebar = this.renderSideBar();
     return (
       <div className="talk">
@@ -341,6 +302,11 @@ class Talk extends Component {
               // onTouchMove={this.handleTouchMove}
               // onTouchEnd={this.handleTouchEnd}
             >
+              {loading ? (
+                <div className="talk__list-loading">
+                  <ListLoading />
+                </div>
+              ) : null}
               <div className="talk__list-load-more-loading">
                 {loadingMoreLoading ? (
                   <React.Fragment>
@@ -418,10 +384,7 @@ const mapStateToProps = (state) => {
   };
 };
 
-const mapDispatchToProps = (dispatch) => {
-  return {
-    dispatch,
-  };
-};
-
-export default connect(mapStateToProps, mapDispatchToProps)(Talk);
+export default connect(mapStateToProps, {
+  ...apis,
+  ...talkActions,
+})(Talk);

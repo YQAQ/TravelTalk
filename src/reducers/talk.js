@@ -11,17 +11,35 @@ const getMockMessages = (number = 100) => {
   const messages = [];
   for (let i = 0; i < number; i++) {
     const type = Math.ceil(Math.random() * 10);
-    const data = {
-      msg: '你好啊，今天天气不错，不如出去看看啊.',
-      type,
-      key: shortid.generate(),
+    const textMsg = {
+      type: 'text',
+      sleep: 0,
+      text: '你好啊，今天天气不错，不如出去看看啊.',
     };
-    messages.push(data);
+    const controlMsg = {
+      type: 'control',
+      control_id: shortid.generate(),
+      show: {
+        name: 'XXX酒店',
+      },
+      callback: [],
+    };
+    messages.push(type <= 5 ? controlMsg : textMsg);
   }
   return messages;
 };
 
-const mockMessages = getMockMessages(1000);
+const handleMsg = (messages) => {
+  return messages.map((message) => {
+    return {
+      ...message,
+      key: shortid.generate(),
+      from: message.from || 'service',
+    };
+  });
+};
+
+const mockMessages = handleMsg(getMockMessages(1000));
 
 const initState = {
   // 选项卡的可见性
@@ -29,6 +47,8 @@ const initState = {
   // 消息列表
   messages: mockMessages,
   showMessages: _.takeRight(mockMessages, 10),
+  // 当前session所在的最新状态id
+  stat_id: '0000_0',
 };
 
 export default (state = initState, action) => {
@@ -40,13 +60,17 @@ export default (state = initState, action) => {
         optionsCardVisible: prevOptionsCardVisible,
       } = state;
       const { payload } = action;
-      const { msg } = payload || {};
-      const { type } = msg || {};
+      const { stat_id, feedback } = payload || {};
+      const messages = handleMsg(feedback || []);
+      const optionsCardVisible = messages.find((message) => {
+        return message.control_id === 1;
+      });
       return {
         ...state,
-        messages: prevMessages.concat(msg),
-        showMessages: prevShowMessages.concat(msg),
-        optionsCardVisible: type <= 5 || prevOptionsCardVisible,
+        stat_id,
+        messages: prevMessages.concat(messages),
+        showMessages: prevShowMessages.concat(messages),
+        optionsCardVisible: optionsCardVisible || prevOptionsCardVisible,
       };
     }
     case SEND_NORMAL_MESSAGE: {
@@ -55,11 +79,11 @@ export default (state = initState, action) => {
         showMessages: prevShowMessages,
       } = state;
       const { payload } = action;
-      const { msg } = payload || {};
+      const { messages } = payload || {};
       return {
         ...state,
-        messages: prevMessages.concat(msg),
-        showMessages: prevShowMessages.concat(msg),
+        messages: prevMessages.concat(messages),
+        showMessages: prevShowMessages.concat(messages),
         optionsCardVisible: false,
       };
     }
