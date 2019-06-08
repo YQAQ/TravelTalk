@@ -47,7 +47,7 @@ class Talk extends Component {
       autoScrollToBottom();
     }
     // 上拉加载更多时保持页面位置没有视觉上的变化
-    this.restorePosition();222
+    this.restorePosition();
   }
 
   /**
