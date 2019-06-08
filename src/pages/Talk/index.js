@@ -48,6 +48,7 @@ class Talk extends Component {
     }
     // 上拉加载更多时保持页面位置没有视觉上的变化
     this.restorePosition();
+    
   }
 
   /**
